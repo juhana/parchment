@@ -215,8 +215,8 @@ Library = Class.extend({
 		url = querystring.get('story', parchment.options.default_story);
 
 		// Commenting out for Parchment for Inform 7, as play.html will set the title appropriately
-		//storyName = url.slice( url.lastIndexOf("/") + 1 );
-		//storyName = storyName ? storyName + " - Parchment" : "Parchment";
+		storyName = url.slice( url.lastIndexOf("/") + 1 );
+		storyName = storyName ? storyName + " - Parchment" : "Parchment";
 		//window.document.title = storyName;
 
 		// Check the story cache first

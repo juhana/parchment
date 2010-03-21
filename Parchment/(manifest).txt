@@ -99,8 +99,8 @@ on your web browser.
 ! Non-comment lines are the names of files which are copied across when the
 ! release is made. Anything not listed here won't be copied.
 
-extras.min.js
 gnusto.min.js
 jquery.min.js
-parchment.min.js
 parchment.css
+parchment.min.js
+zmachine.min.js
