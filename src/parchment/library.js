@@ -195,8 +195,9 @@ launch_zmachine = function( url, library )
 		;;; }
 		;;; /*
 		files = 3;
-		$.getScript( 'lib/gnusto.min.js', callback );
-		$.getScript( 'lib/zmachine.min.js', callback );
+		// Parchment for Inform 7 renames lib/ to interpreter/
+		$.getScript( 'interpreter/gnusto.min.js', callback );
+		$.getScript( 'interpreter/zmachine.min.js', callback );
 		;;; */
 	}
 		
@@ -213,9 +214,10 @@ Library = Class.extend({
 		var querystring = new Querystring(),
 		url = querystring.get('story', parchment.options.default_story);
 
-		storyName = url.slice( url.lastIndexOf("/") + 1 );
-		storyName = storyName ? storyName + " - Parchment" : "Parchment";
-		window.document.title = storyName;
+		// Commenting out for Parchment for Inform 7, as play.html will set the title appropriately
+		//storyName = url.slice( url.lastIndexOf("/") + 1 );
+		//storyName = storyName ? storyName + " - Parchment" : "Parchment";
+		//window.document.title = storyName;
 
 		// Check the story cache first
 		if (this.stories.url[url])

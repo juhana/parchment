@@ -31,9 +31,9 @@ includes = (
 
 # List of files to compress (with debug code removed)
 compress = (
-	('src/gnusto/gnusto-engine.js', 'lib/gnusto.min.js'),
-	('.build/parchment.js', 'lib/parchment.min.js'),
-	('.build/zmachine.js', 'lib/zmachine.min.js'),
+	('src/gnusto/gnusto-engine.js', 'Parchment/gnusto.min.js'),
+	('.build/parchment.js', 'Parchment/parchment.min.js'),
+	('.build/zmachine.js', 'Parchment/zmachine.min.js'),
 )
 
 import os
