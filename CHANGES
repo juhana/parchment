@@ -8,6 +8,7 @@ March 2010
  + Fixed some problems in Gnusto caused by refering to engine rather than this.
  + The launch_zmachine() callback now runs in two stages, in case it is run prematurely.
  * Some minor changes were needed for Parchment for Inform 7.
+ + Fix page up/down support.
 
 February 2010
 ================================================================================
