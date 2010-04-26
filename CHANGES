@@ -1,5 +1,10 @@
 Change log started August 2009.
 
+April 2010
+================================================================================
+Fixed undo support, now with multi-undo support.
+Added a few fixes for various mobile browsers.
+
 March 2010
 ================================================================================
  + Zarf made many changes to Gnusto to remove signed data from the memory, and correct for overflows etc.
