@@ -2,20 +2,20 @@
 
 # Parchment build script
 #
-# Copyright (c) 2003-2010 The Parchment Contributors
+# Copyright (c) 2008-2010 The Parchment Contributors
 # Licenced under the GPL v2
 # http://code.google.com/p/parchment
 
 # Lists of files to combine together
 includes = (
 	('.build/parchment.js', (
+		'src/parchment/intro.js',
 		'src/plugins/class.js',
 		'src/plugins/iff.js',
 		'src/plugins/jquery.hotkeys.js',
 		'src/plugins/querystring.js',
 		'src/plugins/remedial.js',
 		'src/parchment/error-handling.js',
-		'src/parchment/intro.js',
 		'src/parchment/file.js',
 		'src/parchment/ui.js',
 		'src/parchment/library.js',
@@ -36,11 +36,16 @@ compress = (
 	('.build/zmachine.js', 'Parchment/zmachine.min.js'),
 )
 
+import datetime
 import os
 import re
 
-# regex for debug lines
+# Today's date
+today = str(datetime.date.today())
+
+# regex for debug lines, and manifest date replacement
 debug = re.compile(';;;.+$', re.M)
+manifest = re.compile('\[INTERPRETERVERSION\].+?\[\]?', re.S)
 
 # Create .build directory if needed
 if not os.path.isdir('.build'):
@@ -58,13 +63,27 @@ for package in includes:
 # Compress these files, requires the YUI Compressor. Icky Java
 for package in compress:
 	print 'Compressing file: ' + package[1]
+	
 	# Strip out debug lines beginning with ;;;
 	data = file(package[0]).read()
 	data = debug.sub('', data)
+	
+	# Set the date
+	data = data.replace('BUILDDATE', today)
+	
 	# Write to a temp file
 	output = open('.build/temp', 'w')
 	output.write(data)
 	output.close()
+	
 	# Compress!
 	command = 'java -jar tools/yuicompressor-2.4.2.jar --type js .build/temp -o %s' % package[1]
 	os.system(command)
+
+# Set the date in (manifest).txt too
+print 'Updating (manifest).txt'
+data = file('Parchment/(manifest).txt').read()
+data = manifest.sub('[INTERPRETERVERSION]\nParchment for Inform 7 (' + today + ')\n[]', data)
+output = open('Parchment/(manifest).txt', 'w')
+output.write(data)
+output.close()

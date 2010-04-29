@@ -9,7 +9,7 @@
 ! of the play page:
 
 [INTERPRETERVERSION]
-Parchment for Inform 7
+Parchment for Inform 7 (2010-04-29)
 []
 
 [INTERPRETERURL]
@@ -50,7 +50,9 @@ z
 	<meta name="viewport" content="width=device-width">
 	<script>
 		parchment_options = {
-			default_story: [ '[STORYFILE]', 'interpreter/[ENCODEDSTORYFILE]' ]
+			default_story: [ '[STORYFILE]', 'interpreter/[ENCODEDSTORYFILE]' ],
+			lib_path: 'interpreter/',
+			page_title: 0
 		};
 	</script>
 []
