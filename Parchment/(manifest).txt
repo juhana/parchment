@@ -9,7 +9,7 @@
 ! of the play page:
 
 [INTERPRETERVERSION]
-Parchment for Inform 7 (2010-04-29)
+Parchment for Inform 7 (2010-06-22)
 []
 
 [INTERPRETERURL]
@@ -52,6 +52,7 @@ z
 		parchment_options = {
 			default_story: [ '[STORYFILE]', 'interpreter/[ENCODEDSTORYFILE]' ],
 			lib_path: 'interpreter/',
+			lock_story: 1,
 			page_title: 0
 		};
 	</script>
@@ -90,9 +91,11 @@ on your web browser.
 ! call with a string argument:
 
 [BASESIXTYFOURTOP]
+processBase64Zcode('
 []
 
 [BASESIXTYFOURTAIL]
+')
 []
 
 ! Outside of the placeholder parts of the manifest, lines beginning '!', or
