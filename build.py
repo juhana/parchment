@@ -77,7 +77,7 @@ for package in compress:
 	output.close()
 	
 	# Compress!
-	command = 'java -jar tools/yuicompressor-2.4.2.jar --type js .build/temp -o %s' % package[1]
+	command = 'java -jar ../yuicompressor-2.4.2.jar --type js .build/temp -o %s' % package[1]
 	os.system(command)
 
 # Set the date in (manifest).txt too
