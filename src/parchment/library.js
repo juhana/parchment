@@ -5,10 +5,10 @@
  * Licenced under the GPL v2
  * http://code.google.com/p/parchment
  */
-(function(window){
+(function(window, $){
 
 // A story file
-var Story = IFF.extend({
+var Story = IFF.subClass({
 	// Parse a zblorb or naked zcode story file
 	init: function parse_zblorb(data, story_name)
 	{
@@ -114,7 +114,7 @@ var Story = IFF.extend({
 }),
 
 // Story file cache
-StoryCache = Class.extend({
+StoryCache = Object.subClass({
 	// Add a story to the cache
 	add: function(story)
 	{
@@ -144,7 +144,7 @@ launch_zmachine = function( url, library )
 		{
 			// Theoretically everything has been loaded now... though that may not be the case in reality
 			// Call stage2() with a timer in case we have to wait a little longer.
-			timer = setInterval( stage2, 10 );
+			timer = setInterval( stage2, 1 );
 		}
 	},
 	
@@ -153,7 +153,7 @@ launch_zmachine = function( url, library )
 	{
 		// Check that everything has loaded
 		if ( library.loaded_zmachine || 
-		     window.GnustoEngine && window.Quetzal && window.EngineRunner && window.Console && window.WebZui && story )
+		     window.GnustoEngine && window.Quetzal && window.EngineRunner && window.Console && parchment.lib.ZUI && story )
 		{
 			// Everything is here, finally
 			library.loaded_zmachine = true;
@@ -167,7 +167,7 @@ launch_zmachine = function( url, library )
 				function(msg) { window.console.log(msg); },
 
 			engine = new GnustoEngine( logfunc ),
-			zui = new WebZui( library, engine, logfunc ),
+			zui = new parchment.lib.ZUI( library, engine, logfunc ),
 			runner = new EngineRunner( engine, zui, logfunc ),
 
 			mystory = new Story( story, storyName ),
@@ -191,7 +191,7 @@ launch_zmachine = function( url, library )
 	{
 		// Get the correct files for parchment.full.html/parchment.html
 		;;; files = 6;
-		;;; var libs = ['src/gnusto/gnusto-engine.js', 'src/plugins/quetzal.js', 'src/parchment/engine-runner.js', 'src/parchment/console.js', 'src/parchment/web-zui.js'], i = 0, l = 5;
+		;;; ;;; var libs = ['src/gnusto/gnusto-engine.js', 'src/plugins/quetzal.js', 'src/zmachine/runner.js', 'src/zmachine/console.js', 'src/zmachine/zui.js'], i = 0, l = 5;
 		;;; while ( i < l ) {
 		;;; 	$.getScript( libs[i], callback );
 		;;; 	i++;
@@ -208,15 +208,31 @@ launch_zmachine = function( url, library )
 },
 
 // The Parchment Library class
-Library = Class.extend({
+Library = Object.subClass({
+	// Set up the library
+	init: function()
+	{
+		var self = this;
+		
+		// Keep a reference to our container
+		self.container = $( parchment.options.container );
+		
+		// Load indicator
+		self.load_indicator = $( '<div class="dialog load"><p>Parchment is loading.<p>&gt; <blink>_</blink></div>' );
+	},
+	
 	// Load a story or savefile
 	load: function(id)
 	{
-		var options = parchment.options;
+		var self = this,
+		
+		options = parchment.options;
+		
+		// Show the load indicator
+		$( 'body' ).append( self.load_indicator );
 		
 		if ( options.lock_story )
 		{
-
 			// Locked to the default story
 			var storyfile = options.default_story;
 		}
@@ -227,7 +243,7 @@ Library = Class.extend({
 			storyfile = querystring.get('story', options.default_story);
 		}
 		var url = $.isArray( storyfile ) ? storyfile[0] : storyfile;
-		this.url = url;
+		self.url = url;
 
 		storyName = url.slice( url.lastIndexOf("/") + 1 );
 		storyName = storyName ? storyName + " - Parchment" : "Parchment";
@@ -237,10 +253,10 @@ Library = Class.extend({
 		{
 			window.document.title = storyName;
 		}
-
+		
 		// Check the story cache first
-		if (this.stories.url[url])
-			var story = this.stories.url[url];
+		if ( self.stories.url[url] )
+			var story = self.stories.url[url];
 
 		// We will have to download it
 		else
@@ -249,7 +265,7 @@ Library = Class.extend({
 			// When Glulx support is added we will need to sniff the filename to decide which to launch
 			try
 			{
-				launch_zmachine( storyfile, this );
+				launch_zmachine( storyfile, self );
 			}
 			catch (e)
 			{
@@ -263,6 +279,6 @@ Library = Class.extend({
 	savefiles: {}
 });
 
-window.Library = Library;
+parchment.lib.Library = Library;
 
-})(window);
+})(window, jQuery);

@@ -289,6 +289,10 @@ function handleZ_inc_chk(engine, a) {
 
 function handleZ_inc_chk(engine, a)
 {
+	var tcode = handleZ_inc(engine, a);
+	tcode += '{var t1=incdec; t1 = ((t1 & 0x8000 ? ~0xFFFF : 0) | t1); var t2=' + a[1] + '; t2=((t2 & 0x8000 ? ~0xFFFF : 0) | t2);' + engine._brancher('t1 > t2') + '}';
+	return tcode;
+/*
 	var tcode, t2code;
 	tcode = handleZ_incdec(engine, a[0], '+', 1);
 	// Convert both arguments to signed for the comparison.
@@ -297,10 +301,15 @@ function handleZ_inc_chk(engine, a)
 	else
 		t2code = 't2=' + engine._unsigned2signed(a[1]) + ';';
 	return tcode + t2code + 'tmp_'+temp_var+'=(('+'tmp_'+temp_var+' & 0x8000 ? ~0xFFFF : 0) | '+'tmp_'+temp_var+');' + engine._brancher('tmp_'+temp_var+' > t2');
+*/
 }
 
 function handleZ_dec_chk(engine, a)
 {
+	var tcode = handleZ_dec(engine, a);
+	tcode += '{var t1=incdec; t1 = ((t1 & 0x8000 ? ~0xFFFF : 0) | t1); var t2=' + a[1] + '; t2=((t2 & 0x8000 ? ~0xFFFF : 0) | t2);' + engine._brancher('t1 < t2') + '}';
+	return tcode;
+/*
 	var tcode, t2code;
 	tcode = handleZ_incdec(engine, a[0], '-', 1);
 	// Convert both arguments to signed for the comparison.
@@ -309,6 +318,7 @@ function handleZ_dec_chk(engine, a)
 	else
 		t2code = 't2=' + engine._unsigned2signed(a[1]) + ';';
 	return tcode + t2code + 'tmp_'+temp_var+'=(('+'tmp_'+temp_var+' & 0x8000 ? ~0xFFFF : 0) | '+'tmp_'+temp_var+');' + engine._brancher('tmp_'+temp_var+' < t2');
+*/
 }
 
 function handleZ_jin(engine, a) {
@@ -347,17 +357,27 @@ function handleZ_store(engine, a) {
 
 function handleZ_store(engine, a)
 {
-	if (isNotConst.test(a[0]))
-		engine.logger('Z_store', a[0]);
-	if (engine.m_value_asserts) {
-		if (a[0] == null || a[0] === true || a[0] === false || a[0] < 0 || a[0] > 0xFFFF)
-			engine.logger('Z_store address', a[0]);
-		if (a[1] == null || a[1] === true || a[1] === false || a[1] < 0 || a[1] > 0xFFFF)
-			engine.logger('Z_store value', a[1]);
+	var code;
+	if (isNaN(a[0])) { // branch at runtime
+		code = '(' + a[0] + ' == 0) ? m_gamestack[m_gamestack.length - 1] = ' + a[1] + ' : (' + a[0] + ' < 0x10) ? m_locals[( ' + a[0] + ' - 1 )] = ' + a[1] + ' : setWord(' + a[1] + ', m_vars_start + ( ' + a[0] + ' - 16 ) * 2 )';
+	} else {
+		if (a[0] == 0) {
+			code = 'm_gamestack[m_gamestack.length - 1] = ' + a[1];
+		} else if (a[0] < 0x10) {
+			code = 'm_locals[( ' + a[0] + ' - 1 )] = ' + a[1];
+		} else {
+			code = 'setWord(' + a[1] + ', m_vars_start + ( ' + a[0] + ' - 16 ) * 2 )';
+		}
 	}
+	return code;
+
+/*	
+	;;; if (isNotConst.test(a[0])) { engine.logger('Z_store', a[0]); }	
+	;;; if (a[0] == null || a[0] === true || a[0] === false || a[0] < 0 || a[0] > 0xFFFF) { engine.logger('Z_store address', a[0]); }
+	;;; if (a[1] == null || a[1] === true || a[1] === false || a[1] < 0 || a[1] > 0xFFFF) { engine.logger('Z_store value', a[1]); }
 
 	if (a[0] == 0)
-		return 'm_gamestack.push(' + a[1] + ')';
+		return 'm_gamestack[m_gamestack.length - 1] = ' + a[1] + ';';
 	else if (a[0] < 16)
 		return 'm_locals[' + (a[0]-1) + '] = ' + a[1];
 	else
@@ -382,7 +402,7 @@ function handleZ_store(engine, a)
 				'm_memory[' + high + '] = (' + tmp + ' >> 8) & 0xFF;' +
 				'm_memory[' + low + '] = ' + tmp + ' & 0xFF;';
 		}
-	}
+	}*/
 }
 
 function handleZ_insert_obj(engine, a) {
@@ -487,12 +507,40 @@ function handleZ_dec(engine, a) {
 
 function handleZ_inc(engine, a)
 {
-	return handleZ_incdec(engine, a[0], '+');
+//	return handleZ_incdec(engine, a[0], '+');
+
+	var code = 'var incdec; ';
+	if (isNaN(a[0])) { // branch at runtime
+		code += 'var incdec; if (' + a[0] + ' == 0) { incdec = m_gamestack[m_gamestack.length - 1] = (m_gamestack[m_gamestack.length - 1] + 1) & 0xFFFF; } else if (' + a[0] + ' < 0x10) { incdec = m_locals[( ' + a[0] + ' - 1 )] = (m_locals[( ' + a[0] + ' - 1 )] + 1) & 0xFFFF; } else { var val = getUnsignedWord(m_vars_start + ( ' + a[0] + ' - 16 ) * 2 ); val++; setWord(val, m_vars_start + ( ' + a[0] + ' - 16 ) * 2 ); incdec = val; }';
+	} else {
+		if (a[0] == 0) {
+			code += 'incdec = m_gamestack[m_gamestack.length - 1] = (m_gamestack[m_gamestack.length - 1] + 1) & 0xFFFF;';
+		} else if (a[0] < 0x10) {
+			code += 'incdec = m_locals[( ' + a[0] + ' - 1 )] = (m_locals[( ' + a[0] + ' - 1 )] + 1) & 0xFFFF;';
+		} else {
+			code += '{var val = getWord(m_vars_start + ( ' + a[0] + ' - 16 ) * 2 ); val++; setWord(val, m_vars_start + ( ' + a[0] + ' - 16 ) * 2 ); incdec = val;}';
+		}
+	}
+	return code;
 }
 
 function handleZ_dec(engine, a)
 {
-	return handleZ_incdec(engine, a[0], '-');
+	//	return handleZ_incdec(engine, a[0], '-');
+
+	var code = 'var incdec; ';
+	if (isNaN(a[0])) { // branch at runtime
+		code += 'if (' + a[0] + ' == 0) { incdec = m_gamestack[m_gamestack.length - 1] = (m_gamestack[m_gamestack.length - 1] - 1) & 0xFFFF; } else if (' + a[0] + ' < 0x10) { incdec = m_locals[( ' + a[0] + ' - 1 )] = (m_locals[( ' + a[0] + ' - 1 )] - 1) & 0xFFFF; } else { var val = getUnsignedWord(m_vars_start + ( ' + a[0] + ' - 16 ) * 2 ); val--; setWord(val, m_vars_start + ( ' + a[0] + ' - 16 ) * 2 ); incdec = val; }';
+	} else {
+		if (a[0] == 0) {
+			code += 'incdec = m_gamestack[m_gamestack.length - 1] = (m_gamestack[m_gamestack.length - 1] - 1) & 0xFFFF;';
+		} else if (a[0] < 0x10) {
+			code += 'incdec = m_locals[( ' + a[0] + ' - 1 )] = (m_locals[( ' + a[0] + ' - 1 )] - 1) & 0xFFFF;';
+		} else {
+			code += '{var val = getUnsignedWord(m_vars_start + ( ' + a[0] + ' - 16 ) * 2 ); val--; setWord(val, m_vars_start + ( ' + a[0] + ' - 16 ) * 2 ); incdec = val;}';
+		}
+	}
+	return code;
 }
 
 // Increment and decrement variables
@@ -502,7 +550,7 @@ function handleZ_dec(engine, a)
 //	0     = top of game stack
 //	1-15  = local variables
 //	16 up = global variables
-
+/*
 function handleZ_incdec(engine, variable, sign, varRequired)
 {
 	if (isNotConst.test(variable))
@@ -528,7 +576,7 @@ function handleZ_incdec(engine, variable, sign, varRequired)
 			'm_memory[' + add + ' + 1] = ' + tmp + ' & 0xFF;';
 	}
 }
-
+*/
 function handleZ_print_addr(engine, a) {
     return engine._handler_zOut('_zscii_from('+a[0]+')',0);
   }
@@ -554,9 +602,35 @@ function handleZ_jump(engine, a) {
 function handleZ_print_paddr(engine, a) {
     return engine._handler_zOut("_zscii_from("+engine.m_pc_translate_for_string(a[0])+")",0);
 }
-function handleZ_load(engine, a) {
-    return engine._storer('_varcode_get('+a[0]+')');
-  }
+
+function handleZ_load( engine, a )
+{
+	var code;
+	if (isNaN(a[0])) { // branch at runtime
+		code = '(' + a[0] + ' == 0) ? m_gamestack[m_gamestack.length - 1] : (' + a[0] + ' < 0x10) ? m_locals[( ' + a[0] + ' - 1 )] : getUnsignedWord( m_vars_start + ( ' + a[0] + ' - 16 ) * 2 )';
+	} else {
+		if (a[0] == 0) {
+			code = 'm_gamestack[m_gamestack.length - 1]';
+		} else if (a[0] < 0x10) {
+			code = 'm_locals[( ' + a[0] + ' - 1 )]';
+		} else {
+			code = 'getUnsignedWord( m_vars_start + ( ' + a[0] + ' - 16 ) * 2 )';
+		}
+	}
+	return engine._storer( code );
+
+	//return engine._storer('_varcode_get('+a[0]+')');
+/*	var code;
+	if ( a[0] == 0 ) {
+		code = 'm_gamestack[m_gamestack.length - 1]';
+	} else if ( a[0] < 0x10 ) {
+		code = 'm_locals[( ' + a[0] + ' - 1 )]';
+	} else {
+		code = 'getUnsignedWord( m_vars_start + ( ' + a[0] + ' - 16 ) * 2 )';
+	}
+	return engine._storer( code );
+	*/
+}
 
 function handleZ_rtrue(engine, a) {
     engine.m_compilation_running=0;
@@ -625,7 +699,7 @@ function handleZ_illegal_extended(engine, a) {
 function handleZ_piracy(engine, a) {
     engine.m_compilation_running = 0;
 
-    var setter = 'm_rebound=function(){'+engine._brancher('(!m_answers[0])')+'};';
+    var setter = 'm_rebound=function(){'+engine._brancher('(!0)')+'};';//m_answers[0])')+'};';
     return "m_pc="+engine.m_pc+";"+setter+"m_effects=["+GNUSTO_EFFECT_PIRACY+"];return";
 }
 
@@ -827,7 +901,8 @@ function handleZ_push(engine, a) {
 function handleZ_pull(engine, a)
 {
 //	return '_varcode_set(m_gamestack.pop(),'+a[0]+')';
-	return handleZ_store(engine, [a[0], 'm_gamestack.pop()']);
+	var code = 'var pull = m_gamestack.pop(); ';
+	return code += handleZ_store(engine, [a[0], 'pull']);
 }
 
 function handleZ_split_window(engine, a) {
@@ -916,7 +991,7 @@ function handleZ_read_char(engine, a) {
 						engine.m_pc_translate_for_routine(a[2])+'];';
 
 				rebound_setter = "m_rebound=function(){"+
-						"var t=1*m_answers[0];" +
+						"var t=m_answers[0];" +
 						"if(t<0){"+
 						"_func_interrupt(m_rebound_args[0],onISRReturn_for_read_char);"+ // -ve: timeout
 						"}else{"+
@@ -935,7 +1010,7 @@ function handleZ_read_char(engine, a) {
 				// A much simpler rebound function, since zero isn't
 				// a magic answer.
 				rebound_setter = "m_rebound=function(){"+
-						engine._storer("_ascii_code_to_zscii_code(1*m_answers[0])") +
+						engine._storer("_ascii_code_to_zscii_code(m_answers[0])") +
 						"};";
 		}
 
@@ -1057,6 +1132,12 @@ function handleZ_check_unicode(engine, a) {
     // read and write all of them. We can always provide
     // methods to do so somehow (e.g. with an onscreen keyboard).
     return engine._storer('3');
+}
+
+function handleZ_gestalt( engine, a )
+{
+    // 1.2 Standard @gestalt
+    return engine._storer('gestalt(' + a[0] + ', ' + ( a.length < 2 ? 0 : a[1] ) + ')' );
 }
 
 ////////////////////////////////////////////////////////////////
@@ -1187,7 +1268,7 @@ var handlers_v578 = {
     1009: handleZ_save_undo,
     1010: handleZ_restore_undo,
     1011: handleZ_print_unicode,
-    1012: handleZ_check_unicode
+    1012: handleZ_check_unicode,
 
     //1013-1015: illegal
     //1016: move_window (V6 opcode)
@@ -1203,6 +1284,7 @@ var handlers_v578 = {
     //1026: print_form (V6 opcode)
     //1027: make_menu (V6 opcode)
     //1028: picture_table (V6 opcode)
+    1030: handleZ_gestalt
 };
 
 // Differences between each version and v5.
@@ -1622,6 +1704,9 @@ GnustoEngine.prototype = {
 			// Restore the memory.
 			this.m_memory = mem.concat(this.m_memory.slice(mem.length));
 
+			var offset = (this.m_version<=4? 1: 3) + 1;
+			this.m_pc = pc-offset; // rewind to before the varcode_offset
+
 			if (this.m_version <= 3) {
 					// This is pretty ugly, but then the design isn't too beautiful either.
 					// The Quetzal code loads up with the PC pointing at the end of the @save
@@ -1636,17 +1721,13 @@ GnustoEngine.prototype = {
 					// mess things up. (The alternative would be to special-case
 					// |_brancher()|, but this case is so very, very rare and perverted
 					// that that seems inelegant.)
-
-					this.m_pc = pc;
-					eval("var t=new Function('with(this){'+_brancher('1')+'}');t.call(this);");
-
+					eval("var t=new Function('with(this){'+this._brancher('1')+'}');t.call(this);");
 			} else {
 					// The PC we're given is actually pointing at the varcode
 					// into which the success code must be stored. It should be 2.
 					// (This is specified by section 5.8 of the Quetzal document,
 					// version 1.4.)
-					this._varcode_set(2, this.m_memory[pc]);
-					this.m_pc = pc+1;
+					this._varcode_set(2, this.m_memory[this.m_pc++]);
 			}
 
 	},
@@ -1975,6 +2056,16 @@ GnustoEngine.prototype = {
 
     return outtext + spacebuffer + outtext2;
   },
+  
+	// @gestalt selectors
+	gestalt: function( id, arg )
+	{
+		// 1: Standard Revision
+		if ( id == 1 )
+			return 0x0102;
+		else
+			return 0;
+	},
 
   ////////////////////////////////////////////////////////////////
   ////////////////////////////////////////////////////////////////
@@ -2053,7 +2144,7 @@ GnustoEngine.prototype = {
       } else {
 	  gnusto_error(170, 'impossible: unknown z-version got this far');
       }
-
+      
       // And pick up the relevant instruction set.
 
       if (!(this.m_version in handlers_fixups)) {
@@ -2179,7 +2270,17 @@ GnustoEngine.prototype = {
       this.m_leftovers = '';
 
 		// Set some header variables
+		this.m_memory[0x1E] = 1; // DEC
+		this.m_memory[0x1F] = 0; // no letter ('F' would indicate that we're frotz, which may not be desirable)
 
+		// set in runner.js in run();
+		// this.m_memory[0x20] = 25; // screen height (255 = infinite)
+		// this.m_memory[0x21] = 80; // screen width in characters ('0')
+		// this.setWord(80, 0x22); // screen width in 'units'
+		// this.setWord(25, 0x24);
+		this.m_memory[1] |= 0x1D; // announce support for styled text and color
+		this.m_memory[0x26] = 1; // font width/height (dep. version) in 'units'
+		this.m_memory[0x27] = 1; // font width/height (dep. version) in 'units'
 		// Z Machine Spec version
 		this.m_memory[0x32] = 1;
 		this.m_memory[0x33] = 0;
@@ -2426,7 +2527,8 @@ GnustoEngine.prototype = {
 					//code = code + '/*' + instr + '*/';
 
 					if (this.m_handlers[instr]) {
-							code = code + this.m_handlers[instr](this, args)+';';
+						code = code + this.m_handlers[instr](this, args)+';';
+						// NOTE: insert this.logger here to debug a particular opcode
 					} else if (instr>=1128 && instr<=1255 &&
 										 "special_instruction_EXT"+(instr-1000) in this) {
 
@@ -2572,27 +2674,51 @@ GnustoEngine.prototype = {
 
 			return String.fromCharCode(result);
 	},
+	
+	_ascii_code_to_zscii_code: function ge_ascii_char_to_zscii( ascii_code ) {
 
-	_ascii_code_to_zscii_code: function ge_ascii_char_to_zscii(ascii_code) {
-		if ((ascii_code>=32 && ascii_code<=126) || ascii_code==0) {
+		// ZSCII code 13 must be used for the enter key
+		// Correct for the arrow keys
+		var ZSCII_corrections = {
+			10: 13, // Enter
+			13: 13,
+			37: 131, // Left
+			38: 129, // Up
+			39: 132, // Right
+			40: 130 // Down
+		};
+		
+		// Are we converting a char input event?
+		if ( isNaN( ascii_code ) )
+		{		
+			// Correct for some ZSCII differences
+			if ( ascii_code.keyCode && ZSCII_corrections[ascii_code.keyCode] )
+			{
+				return ZSCII_corrections[ascii_code.keyCode];
+			}
+			else
+			{
+				var ascii_code = ascii_code.charCode;
+			}
+		}
+		
+		// Standard ASCII characters, except for the arrow keys, plus NULL
+		if ( ( ascii_code > 31 && ascii_code < 127 ) || ascii_code == 0 )
+		{
 			// Most common case - keep it as fast as possible
 			return ascii_code;
 		}
 		
-		var result;
-		
 		if (ascii_code < 0) {
 			gnusto_error(702, 'Illegal unicode character:' + ascii_code); // illegal ascii code
-		} else if (ascii_code==13 || ascii_code==10) {
-			result = 10;
-		} else {
-			// Must be among extra characters.
-			result = reverse_unicode_table[ascii_code];
-			if(!result) {
-				// gnusto_error(703, 'No ZSCII equivalent found for this unicode character code: ' + ascii_code); // unknown ascii code
-				// Let's translate it into '*' for now. Should we raise an error instead?
-				result = '*'.charCodeAt(0);
-			}
+		}
+		
+		// Must be among extra characters.
+		var result = reverse_unicode_table[ascii_code];
+		if(!result) {
+			// gnusto_error(703, 'No ZSCII equivalent found for this unicode character code: ' + ascii_code); // unknown ascii code
+			// Let's translate it into '*' for now. Should we raise an error instead?
+			result = 42;
 		}
 		
 		return result;
@@ -3115,11 +3241,15 @@ GnustoEngine.prototype = {
 			}
 	},
 
-	_get_prop_len: function ge_get_prop_len(address) {
-	    if (this.m_value_asserts) {
-				if (address == null || address === true || address === false || address < 0 || address >= this.m_stat_start)
-			 		this.logger('get_prop_len', address);
-			}
+	_get_prop_len: function ge_get_prop_len(address)
+	{
+		;;; if (address == null || address === true || address === false || address < 0 || address >= this.m_stat_start) { this.logger('get_prop_len', address); }
+
+		// Spec 1.1 clarification: @get_prop_len 0 must return 0
+		if ( address == 0 )
+		{
+			return 0;
+		}
 
 			if (this.m_version<4) {
 					return 1+(this.m_memory[address-1] >> 5);
@@ -3148,7 +3278,6 @@ GnustoEngine.prototype = {
 							}
 					}
 			}
-			gnusto_error(170, 'get_prop_len'); // impossible
 	},
 
 	_get_next_prop: function ge_get_next_prop(object, property) {
@@ -4015,6 +4144,8 @@ GnustoEngine.prototype = {
 	// TODO: We need a varcode_getcode() which returns a JS string
 	// which will perform the same job as this function, to save us
 	// the extra call we use when encoding "varcode_get(constant)".
+/***
+	Not in current use... inlined in handleZ_load
 	_varcode_get: function ge_varcode_get(varcode) {
 			if (varcode==0) {
 					return this.m_gamestack.pop();
@@ -4026,6 +4157,7 @@ GnustoEngine.prototype = {
 
 			gnusto_error(170, 'varcode_get'); // impossible
 	},
+***/
 
 	////////////////////////////////////////////////////////////////
 	//

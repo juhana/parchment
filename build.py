@@ -10,9 +10,8 @@
 includes = (
 	('.build/parchment.js', (
 		'src/parchment/intro.js',
-		'src/plugins/class.js',
-		'src/plugins/iff.js',
-		'src/plugins/jquery.hotkeys.js',
+		'src/lib/class.js',
+		'src/lib/iff.js',
 		'src/plugins/querystring.js',
 		'src/plugins/remedial.js',
 		'src/parchment/error-handling.js',
@@ -22,10 +21,10 @@ includes = (
 		'src/parchment/outro.js',
 	)),
 	('.build/zmachine.js', (
+		'src/zmachine/zui.js',
 		'src/plugins/quetzal.js',
-		'src/parchment/engine-runner.js',
-		'src/parchment/console.js',
-		'src/parchment/web-zui.js',
+		'src/zmachine/runner.js',
+		'src/zmachine/console.js',
 	)),
 )
 
