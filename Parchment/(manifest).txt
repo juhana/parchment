@@ -9,7 +9,7 @@
 ! of the play page:
 
 [INTERPRETERVERSION]
-Parchment for Inform 7 (2010-10-18)
+Parchment for Inform 7 (2010-10-21)
 []
 
 [INTERPRETERURL]
@@ -47,8 +47,6 @@ z
 	<script src="interpreter/jquery.min.js" defer></script>
 	<script src="interpreter/parchment.min.js" defer></script>
 	<link rel="stylesheet" type="text/css" href="interpreter/parchment.css">
-	<style>@media screen and (max-device-width: 480px)
-	{ .gameport { margin-left: 0px; width: auto; } }</style>
 	<script>
 		parchment_options = {
 			default_story: [ "[STORYFILE]", "interpreter/[ENCODEDSTORYFILE]" ],
@@ -63,14 +61,12 @@ z
 ! or gadget actually appears.
 
 [INTERPRETERBODY]
-<div class="gameport">
-	<div id="about">
-		<h1>Parchment</h1>
-		<p>is an interpreter for Interactive Fiction. <a href="http://parchment.googlecode.com">Find out more.</a></p>
-		<noscript><p>Parchment requires Javascript. Please enable it in your browser.</p></noscript>
-	</div>
-	<div id="parchment"></div>
+<div id="about">
+	<h1>Parchment</h1>
+	<p>is an interpreter for Interactive Fiction. <a href="http://parchment.googlecode.com">Find out more.</a></p>
+	<noscript><p>Parchment requires Javascript. Please enable it in your browser.</p></noscript>
 </div>
+<div id="parchment"></div>
 []
 
 ! The following footnote is added to the small print about how to play IF

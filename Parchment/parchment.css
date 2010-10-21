@@ -2,27 +2,6 @@
 Wrapper formatting to modify the appearance of browser-playable games via Parchment. 
 */
 
-.gameport
-{
-	margin-top: 1.4em;
-	margin-left: 15.4em;
-	width: 33em;
-	line-height: 1.4;
-}
-
-html
-{
-	overflow-y: scroll;
-	-webkit-text-size-adjust: none;
-}
-
-body
-{
-	font-family: Georgia, Palatino, serif;
-	margin: 0 0 8px;
-	text-align: center;
-}
-
 /*
 Foreground and background styles for each of the standard z-machine colors and styles.
 */
@@ -166,7 +145,7 @@ Foreground and background styles for each of the standard z-machine colors and s
 
 #content {
     text-align: left;
-    margin: 0 auto;
+    width: 33em;
 }
 
 /* General dialogs */
