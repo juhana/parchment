@@ -913,7 +913,7 @@ function oputil_store(context, funcop, operand) {
             }
         }
 
-        holdvar = alloc_holdvar(context, true);
+        var holdvar = alloc_holdvar(context, true);
         context.offstack.push(holdvar);
         if (funcop.argsize == 4) {
             context.code.push(holdvar+"=("+operand+");");

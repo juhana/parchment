@@ -18,7 +18,7 @@ parchment.vms.quixe = {
 	// Files to load
 	files: [
 			/* DEBUG */
-				'../src/quixe/prototype-1.6.1.js',
+				//'../src/quixe/prototype-1.6.1.js',
 				'../src/quixe/glkote/glkote.js',
 				'../src/quixe/glkote/dialog.js',
 				'../src/quixe/glkote/glkapi.js',
@@ -46,7 +46,7 @@ parchment.vms.quixe = {
 		game_options = {
 			inspacing: 0, // gap between windows
 			outspacing: 0, // gap between windows and edge of gameport
-			vm: Quixe, // default game engine
+			vm: Quixe // default game engine
 			//io: Glk, // default display layer
 		};
 		

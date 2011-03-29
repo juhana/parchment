@@ -55,7 +55,6 @@ var last_known_paging = 0;
 var windows_paging_count = 0;
 var resize_timer = null;
 var retry_timer = null;
-var is_ie7 = false;
 var perform_paging = true;
 
 /* Some handy constants */
@@ -75,6 +74,9 @@ var terminator_key_names = {
 /* The inverse of the above. Set up at init time. */
 var terminator_key_values = {};
 
+// This should really be replaced with something more reliable and less Apple-centric
+var MobileSafari = /Apple.*Mobile/.test(navigator.userAgent);
+
 /* This function becomes GlkOte.init(). The document calls this to begin
    the game. The simplest way to do this is to give the <body> tag an
    onLoad="GlkOte.init();" attribute.
@@ -92,14 +94,14 @@ function glkote_init(iface) {
   }
   game_interface = iface;
 
-  if (!window.Prototype) {
-    glkote_error('The Prototype library has not been loaded.');
+  if (!window.jQuery) {
+    glkote_error('jQuery has not been loaded.');
     return;
   }
 
-  var version = Prototype.Version.split('.');
-  if (version.length < 2 || (version[0] == 1 && version[1] < 6)) {
-    glkote_error('This version of the Prototype library is too old. (Version ' + Prototype.Version + ' found; 1.6.0 required.)');
+  var version = jQuery.fn.jquery.split('.');
+  if (version.length < 2 || (version[0] == 1 && version[1] < 5)) {
+    glkote_error('Your version of jQuery is too old. (Version ' + jQuery.fn.jquery + ' found; 1.5 required.)');
     return;
   }
 
@@ -108,34 +110,31 @@ function glkote_init(iface) {
     terminator_key_values[terminator_key_names[val]] = val;
   }
 
-  if (Prototype.Browser.MobileSafari) {
+  if (MobileSafari) {
     /* Paging doesn't make sense for iphone/android, because you can't
        get keystroke events from a window. */
     perform_paging = false;
   }
-  if (Prototype.Browser.IE) {
-    is_ie7 = window.XMLHttpRequest != null;
-  }
 
-  windowdic = new Hash();
+  windowdic = {};
 
   if (iface.windowport)
       windowport_id = iface.windowport;
   if (iface.gameport)
       gameport_id = iface.gameport;
 
-  var el = $(windowport_id);
+  var el = $('#' + windowport_id);
   if (!el) {
     glkote_error('Cannot find windowport element #'+windowport_id+' in this document.');
     return;
   }
-  el.update();
-  if (!Prototype.Browser.MobileSafari) 
-    Event.observe(document, 'keypress', evhan_doc_keypress);
-  Event.observe(window, 'resize', evhan_doc_resize);
+  el.empty();
+  if (MobileSafari)
+	$(document).keypress( evhan_doc_keypress );
+  $(window).resize( evhan_doc_resize );
 
   var res = measure_window();
-  if (Object.isString(res)) {
+  if (typeof res == 'string') {
     glkote_error(res);
     return;
   }
@@ -157,55 +156,52 @@ function glkote_init(iface) {
 */
 function measure_window() {
   var metrics = {};
-  var el, linesize, winsize, line1size, line2size, spansize;
+  var el, linesize, winsize, line1size, line2size, spansize,
+  span, line1, line2;
 
   /* We assume the gameport is the same size as the windowport, which
      is true on all browsers but IE7. Fortunately, on IE7 it's
      the windowport size that's wrong -- gameport is the size
      we're interested in. */
-  el = $(gameport_id);
+  el = $('#' + gameport_id);
   if (!el)
     return 'Cannot find gameport element #'+gameport_id+' in this document.';
 
-  var portsize = el.getDimensions();
-  metrics.width  = portsize.width;
-  metrics.height = portsize.height;
+  metrics.width  = el.outerWidth();
+  metrics.height = el.outerHeight();
 
-  el = $('layouttest_grid');
+  // TODO: Add in the necessary HTML here!
+  el = $('#layouttest_grid');
   if (!el)
     return 'Cannot find layouttest_grid element for window measurement.';
 
-  winsize = el.getDimensions();
-  spansize = $('layouttest_gridspan').getDimensions();
-  line1size = $('layouttest_gridline').getDimensions();
-  line2size = $('layouttest_gridline2').getDimensions();
+  span = $('#layouttest_gridspan');
+  line1 = $('#layouttest_gridline');
+  line2 = $('#layouttest_gridline2');
 
-  metrics.gridcharheight = ($('layouttest_gridline2').positionedOffset().top
-    - $('layouttest_gridline').positionedOffset().top);
-  metrics.gridcharwidth = (spansize.width / 8);
+  metrics.gridcharheight = (line2.position().top - line1.position().top);
+  metrics.gridcharwidth = (span.outerWidth() / 8);
   /* Yes, we can wind up with a non-integer charwidth value. */
 
   /* these values include both sides (left+right, top+bottom) */
-  metrics.gridmarginx = winsize.width - spansize.width;
-  metrics.gridmarginy = winsize.height - (line1size.height + line2size.height);
+  metrics.gridmarginx = el.outerWidth() - span.outerWidth();
+  metrics.gridmarginy = el.outerHeight() - (line1.outerHeight() + line2.outerHeight());
 
-  el = $('layouttest_buffer');
+  el = $('#layouttest_buffer');
   if (!el)
     return 'Cannot find layouttest_grid element for window measurement.';
 
-  winsize = el.getDimensions();
-  spansize = $('layouttest_bufferspan').getDimensions();
-  line1size = $('layouttest_bufferline').getDimensions();
-  line2size = $('layouttest_bufferline2').getDimensions();
+  span = $('#layouttest_bufferspan');
+  line1 = $('#layouttest_bufferline');
+  line2 = $('#layouttest_bufferline2');
 
-  metrics.buffercharheight = ($('layouttest_bufferline2').positionedOffset().top
-    - $('layouttest_bufferline').positionedOffset().top);
-  metrics.buffercharwidth = (spansize.width / 8);
+  metrics.buffercharheight = (line2.position().top - line1.position().top);
+  metrics.buffercharwidth = (span.outerWidth() / 8);
   /* Yes, we can wind up with a non-integer charwidth value. */
 
   /* these values include both sides (left+right, top+bottom) */
-  metrics.buffermarginx = winsize.width - spansize.width;
-  metrics.buffermarginy = winsize.height - (line1size.height + line2size.height);
+  metrics.buffermarginx = el.outerWidth() - span.outerWidth();
+  metrics.buffermarginy = el.outerHeight() - (line1.outerHeight() + line2.outerHeight());
 
   /* these values come from the game interface object */
   metrics.outspacingx = 0;
@@ -260,7 +256,7 @@ function glkote_update(arg) {
     if (!retry_timer) {
       glkote_log('Event has timed out; will retry...');
       show_loading();
-      retry_timer = retry_update.delay(2);
+	  retry_timer = setTimeout( retry_update, 2000 );
     }
     else {
       glkote_log('Event has timed out, but a retry is already queued!');
@@ -287,7 +283,7 @@ function glkote_update(arg) {
 
   /* Un-disable the UI, if it was previously disabled. */
   if (disabled) {
-    windowdic.values().each(function(win) {
+	jQuery.each( windowdic, function(i, win) {
       if (win.inputel) {
         win.inputel.disabled = false;
       }
@@ -310,7 +306,7 @@ function glkote_update(arg) {
      Then, we take the opportunity to update topunseen. (If a buffer
      window hasn't changed, topunseen hasn't changed.) */
 
-  windowdic.values().each(function(win) {
+  jQuery.each( windowdic, function(i, win) {
     if (win.type == 'buffer' && win.needscroll) {
       /* needscroll is true if the window has accumulated any content or
          an input field in this update cycle. needspaging is true if
@@ -333,7 +329,7 @@ function glkote_update(arg) {
           /* Scroll the unseen content to the top. */
           frameel.scrollTop = win.topunseen - current_metrics.buffercharheight;
           /* Compute the new topunseen value. */
-          var frameheight = frameel.getHeight();
+          var frameheight = frameel.outerHeight();
           var realbottom = last_line_top_offset(frameel);
           var newtopunseen = frameel.scrollTop + frameheight;
           if (newtopunseen > realbottom)
@@ -351,21 +347,23 @@ function glkote_update(arg) {
         }
 
         /* Add or remove the more prompt, based on the new needspaging flag. */
-        var moreel = $('win'+win.id+'_moreprompt');
+        var moreel = $('#win'+win.id+'_moreprompt');
         if (!win.needspaging) {
           if (moreel)
             moreel.remove();
         }
         else {
           if (!moreel) {
-            moreel = new Element('div',
-              { id: 'win'+win.id+'_moreprompt', 'class': 'MorePrompt' } );
-            insert_text(moreel, 'More');
+			moreel = jQuery( '<div>', {
+				id: 'win' + win.id + '_moreprompt',
+				'class': 'MorePrompt'
+			})
+				.text( 'More' );
             /* 20 pixels is a cheap approximation of a scrollbar-width. */
             var morex = win.coords.right + 20;
             var morey = win.coords.bottom;
-            moreel.setStyle({ bottom:morey+'px', right:morex+'px' });
-            $(windowport_id).insert(moreel);
+            moreel.css({ bottom:morey+'px', right:morex+'px' });
+            $('#' + windowport_id).append(moreel);
           }
         }
       }
@@ -380,7 +378,7 @@ function glkote_update(arg) {
   disabled = false;
   if (arg.disable) {
     disabled = true;
-    windowdic.values().each(function(win) {
+    jQuery.each( windowdic, function(i, win) {
       if (win.inputel) {
         win.inputel.disabled = true;
       }
@@ -394,7 +392,7 @@ function glkote_update(arg) {
 
   var newinputwin = 0;
   if (!disabled && !windows_paging_count) {
-    windowdic.values().each(function(win) {
+    jQuery.each( windowdic, function(i, win) {
       if (win.input) {
         if (!newinputwin || win.id == last_known_focus)
           newinputwin = win.id;
@@ -408,7 +406,7 @@ function glkote_update(arg) {
        giving it the focus right away. So we defer the call until
        after the javascript context has yielded control to the browser. */
     var focusfunc = function() {
-      var win = windowdic.get(newinputwin);
+      var win = windowdic[newinputwin];
       if (win.inputel) {
         win.inputel.focus();
       }
@@ -427,11 +425,11 @@ function glkote_update(arg) {
    an empty argument object (which would mean "close all windows").
 */
 function accept_windowset(arg) {
-  windowdic.values().each(function(win) { win.inplace = false; });
+  jQuery.each( windowdic, function(i, win) { win.inplace = false; });
   arg.map(accept_one_window);
 
   /* Close any windows not mentioned in the argument. */
-  var closewins = windowdic.values().reject(function(win) { return win.inplace; });
+  var closewins = jQuery.grep( windowdic, function(win) { return win.inplace; }, 1 );
   closewins.map(close_one_window);
 }
 
@@ -445,23 +443,23 @@ function accept_one_window(arg) {
     return;
   }
 
-  win = windowdic.get(arg.id);
+  win = windowdic[arg.id];
   if (win == null) {
     /* The window must be created. */
     win = { id: arg.id, type: arg.type, rock: arg.rock };
-    windowdic.set(arg.id, win);
+    windowdic[arg.id] = win;
     var typeclass;
     if (win.type == 'grid')
       typeclass = 'GridWindow';
     if (win.type == 'buffer')
       typeclass = 'BufferWindow';
     var rockclass = 'WindowRock_' + arg.rock;
-    frameel = new Element('div',
-      { id: 'window'+arg.id,
-        'class': 'WindowFrame ' + typeclass + ' ' + rockclass });
+	frameel = jQuery( '<div>', {
+		id: 'window' + arg.id,
+        'class': 'WindowFrame ' + typeclass + ' ' + rockclass,
+		mousedown: function(ev) { evhan_window_mousedown(ev, frameel); }
+	});
     frameel.winid = arg.id;
-    Event.observe(frameel, 'mousedown', 
-      function(ev) { evhan_window_mousedown(ev, frameel); });
     if (perform_paging && win.type == 'buffer')
       frameel.onscroll = function() { evhan_window_scroll(frameel); };
     win.frameel = frameel;
@@ -475,9 +473,9 @@ function accept_one_window(arg) {
     win.needspaging = false;
     win.topunseen = 0;
     win.coords = { left:null, top:null, right:null, bottom:null };
-    win.history = new Array();
+    win.history = [];
     win.historypos = 0;
-    $(windowport_id).insert(frameel);
+    jQuery('#' + windowport_id).append(frameel);
   }
   else {
     frameel = win.frameel;
@@ -492,15 +490,17 @@ function accept_one_window(arg) {
     var ix;
     if (arg.gridheight > win.gridheight) {
       for (ix=win.gridheight; ix<arg.gridheight; ix++) {
-        var el = new Element('div',
-          { id: 'win'+win.id+'_ln'+ix, 'class': 'GridLine' });
-        el.insert(NBSP);
-        win.frameel.insert(el);
+		var el = jQuery( '<div>', {
+			id: 'win' + win.id + '_ln' + ix,
+			'class': 'GridLine'
+		})
+			.text( NBSP )
+			.appendTo( win.frameel );
       }
     }
     if (arg.gridheight < win.gridheight) {
       for (ix=arg.gridheight; ix<win.gridheight; ix++) {
-        var el = $('win'+win.id+'_ln'+ix);
+        var el = $('#win'+win.id+'_ln'+ix);
         if (el)
           el.remove();
       }
@@ -517,7 +517,7 @@ function accept_one_window(arg) {
      of the border, but width/height are measured from the inside of the
      border. (Measured by the browser's DOM methods, I mean.) */
   var styledic;
-  if (Prototype.Browser.IE) {
+  if (jQuery.browser.msie) {
     /* Actually this method works in Safari also, but in Firefox the buffer
        windows are too narrow by a scrollbar-width. So we don't use it
        generally. */
@@ -553,7 +553,7 @@ function accept_one_window(arg) {
     win.coords.right = right;
     win.coords.bottom = bottom;
   }
-  frameel.setStyle(styledic);
+  frameel.css(styledic);
 }
 
 /* Handle closing one window. */
@@ -562,7 +562,7 @@ function close_one_window(win) {
   windowdic.unset(win.id);
   win.frameel = null;
 
-  var moreel = $('win'+win.id+'_moreprompt');
+  var moreel = $('#win'+win.id+'_moreprompt');
   if (moreel)
     moreel.remove();
 }
@@ -575,8 +575,7 @@ var regex_long_whitespace = new RegExp('  +', 'g'); /* two or more spaces */
 /* Given a run of N spaces (N >= 2), return N-1 non-breaking spaces plus
    a normal one. */
 function func_long_whitespace(match) {
-  var len = match.length;
-  return (NBSP.times(len-1)) + ' ';
+  return Array( match.length ).join( NBSP ) + ' ';
 }
 
 /* Handle all of the window content changes. */
@@ -586,7 +585,7 @@ function accept_contentset(arg) {
 
 /* Handle the content changes for a single window. */
 function accept_one_content(arg) {
-  var win = windowdic.get(arg.id);
+  var win = windowdic[arg.id];
 
   /* Check some error conditions. */
 
@@ -610,7 +609,7 @@ function accept_one_content(arg) {
       var linearg = lines[ix];
       var linenum = linearg.line;
       var content = linearg.content;
-      var lineel = $('win'+win.id+'_ln'+linenum);
+      var lineel = $('#win'+win.id+'_ln'+linenum);
       if (!lineel) {
         glkote_error('Got content for nonexistent line ' + linenum + ' of window ' + arg.id + '.');
         continue;
@@ -619,7 +618,7 @@ function accept_one_content(arg) {
         lineel.update(NBSP);
       }
       else {
-        lineel.update();
+        lineel.empty();
         for (sx=0; sx<content.length; sx++) {
           var rdesc = content[sx];
           var rstyle, rtext, rlink;
@@ -634,19 +633,19 @@ function accept_one_content(arg) {
             rtext = content[sx];
             rlink = undefined;
           }
-          var el = new Element('span',
-            { 'class': 'Style_' + rstyle } );
+		  var el = jQuery( '<span>', { 'class': 'Style_' + rstyle });
           if (rlink == undefined) {
             insert_text(el, rtext);
           }
           else {
-            var ael = new Element('a',
-              { 'href': '#' } );
-            insert_text(ael, rtext);
-            ael.onclick = build_evhan_hyperlink(win.id, rlink);
-            el.insert(ael);
+		    var ael = jQuery( '<a>', {
+				'href': '#',
+				click: build_evhan_hyperlink( win.id, rlink )
+			})
+				.text( rtext )
+				.appendTo( el );
           }
-          lineel.insert(el);
+          lineel.append(el);
         }
       }
     }
@@ -665,7 +664,7 @@ function accept_one_content(arg) {
         win.inputel.remove();
     }
 
-    var cursel = $('win'+win.id+'_cursor');
+    var cursel = $('#win'+win.id+'_cursor');
     if (cursel)
       cursel.remove();
     cursel = null;
@@ -697,23 +696,25 @@ function accept_one_content(arg) {
       if (textarg.append) {
         if (!content || !content.length)
           continue;
-        divel = last_child_of(win.frameel);
+		divel = win.frameel.children().last();
       }
       if (divel == null) {
         /* Create a new paragraph div */
-        divel = new Element('div', { 'class': 'BufferLine' })
+		divel = jQuery( '<div>', {
+			'class': 'BufferLine'
+		});
         divel.blankpara = true;
         divel.endswhite = true;
-        win.frameel.insert(divel);
+        win.frameel.append(divel);
       }
       if (!content || !content.length) {
         if (divel.blankpara)
-          divel.update(NBSP);
+          divel.text(NBSP);
         continue;
       }
       if (divel.blankpara) {
         divel.blankpara = false;
-        divel.update();
+        divel.empty();
       }
       /* We must munge long strings of whitespace to make sure they aren't
          collapsed. (This wouldn't be necessary if "white-space: pre-wrap"
@@ -736,23 +737,25 @@ function accept_one_content(arg) {
           rtext = content[sx];
           rlink = undefined;
         }
-        var el = new Element('span',
-          { 'class': 'Style_' + rstyle } );
+		var el = jQuery( '<span>', {
+			'class': 'Style_' + rstyle
+		});
         rtext = rtext.replace(regex_long_whitespace, func_long_whitespace);
         if (divel.endswhite) {
           rtext = rtext.replace(regex_initial_whitespace, NBSP);
         }
         if (rlink == undefined) {
-          insert_text(el, rtext);
+		  el.text( rtext );
         }
         else {
-          var ael = new Element('a',
-            { 'href': '#' } );
-          insert_text(ael, rtext);
-          ael.onclick = build_evhan_hyperlink(win.id, rlink);
-          el.insert(ael);
+		  var ael = jQuery( '<a>', {
+			click: build_evhan_hyperlink(win.id, rlink),
+			href: '#'
+		  })
+			.text( rtext )
+			.appendTo( el );
         }
-        divel.insert(el);
+        divel.append(el);
         divel.endswhite = regex_final_whitespace.test(rtext);
       }
     }
@@ -779,22 +782,24 @@ function accept_one_content(arg) {
 
     /* Stick the invisible cursor-marker at the end. We use this to
        position the input box. */
-    var divel = last_child_of(win.frameel);
+	var divel = win.frameel.children().last();
     if (divel) {
-      cursel = new Element('span',
-        { id: 'win'+win.id+'_cursor', 'class': 'InvisibleCursor' } );
-      insert_text(cursel, NBSP);
-      divel.insert(cursel);
+	  cursel = jQuery( '<span>', {
+		id: 'win'+win.id+'_cursor',
+		'class': 'InvisibleCursor'
+	  })
+		.text( NBSP );
+      divel.append(cursel);
 
       if (win.inputel) {
         /* Put back the inputel that we found earlier. */
         var inputel = win.inputel;
         var pos = cursel.positionedOffset();
         /* This calculation is antsy. On Firefox, buffermarginx is too high
-           (or getWidth() is too low) by the width of a scrollbar. On MSIE,
+           (or width() is too low) by the width of a scrollbar. On MSIE,
            buffermarginx is one pixel too low. We fudge for that, giving a
            result which errs on the low side. */
-        var width = win.frameel.getWidth() - (current_metrics.buffermarginx + pos.left + 2);
+        var width = win.frameel.outerWidth() - (current_metrics.buffermarginx + pos.left + 2);
         if (width < 1)
           width = 1;
         if (Prototype.Browser.Opera) {
@@ -802,12 +807,12 @@ function accept_one_content(arg) {
              means. We will avoid it. */
           inputel.setStyle({ position: 'relative',
             left: '0px', top: '0px', width: width+'px' });
-          cursel.insert({ top:inputel });
+          cursel.append({ top:inputel });
         }
         else {
           inputel.setStyle({ position: 'absolute',
             left: '0px', top: '0px', width: width+'px' });
-          cursel.insert(inputel);
+          cursel.append(inputel);
         }
       }
     }
@@ -821,15 +826,15 @@ function accept_one_content(arg) {
    (The latter case means that input was cancelled and restarted.)
 */
 function accept_inputcancel(arg) {
-  var hasinput = new Hash();
+  var hasinput = {};
   arg.map(function(argi) { 
     if (argi.type)
-      hasinput.set(argi.id, argi); 
+      hasinput[argi.id] = argi; 
   });
 
-  windowdic.values().each(function(win) {
+  jQuery.each( windowdic, function(i, win) {
     if (win.input) {
-      var argi = hasinput.get(win.id);
+      var argi = hasinput[win.id];
       if (argi == null || argi.gen > win.input.gen) {
         /* cancel this input. */
         win.input = null;
@@ -846,19 +851,18 @@ function accept_inputcancel(arg) {
    to change position, move it.
 */
 function accept_inputset(arg) {
-  var hasinput = new Hash();
-  var hashyperlink = new Hash();
+  var hasinput = {},
+  hashyperlink = {};
   arg.map(function(argi) {
     if (argi.type)
-      hasinput.set(argi.id, argi); 
+      hasinput[argi.id] = argi;	  
     if (argi.hyperlink)
-      hashyperlink.set(argi.id, true);
+	  hashyperlink[argi.id] = true;
   });
 
-  windowdic.values().each(function(win) {
-    win.reqhyperlink = hashyperlink.get(win.id);
-
-    var argi = hasinput.get(win.id);
+  jQuery.each( windowdic, function(i, win) {
+	win.reqhyperlink = hashyperlink[win.id];
+	var argi = hasinput[win.id];
     if (argi == null)
       return;
     win.input = argi;
@@ -880,16 +884,18 @@ function accept_inputset(arg) {
       else {
         glkote_error('Window ' + win.id + ' has requested unrecognized input type ' + argi.type + '.');
       }
-      inputel = new Element('input',
-        { id: 'win'+win.id+'_input',
-          'class': classes, type: 'text', maxlength: maxlen });
-      if (Prototype.Browser.MobileSafari)
-        inputel.writeAttribute('autocapitalize', 'off');
+	  inputel = jQuery( '<input>', {
+		autocapitalize: 'off',
+		id: 'win' + win.id + '_input',
+		'class': classes,
+		type: 'text',
+		maxlength: maxlen
+	  });
       if (argi.type == 'line') {
-        inputel.onkeypress = evhan_input_keypress;
-        inputel.onkeydown = evhan_input_keydown;
+        inputel.keypress( evhan_input_keypress );
+        inputel.keydown( evhan_input_keydown );
         if (argi.initial)
-          inputel.value = argi.initial;
+          inputel.val( argi.initial );
         win.terminators = {};
         if (argi.terminators) {
           for (var ix=0; ix<argi.terminators.length; ix++) 
@@ -897,23 +903,23 @@ function accept_inputset(arg) {
         }
       }
       else if (argi.type == 'char') {
-        inputel.onkeypress = evhan_input_char_keypress;
-        inputel.onkeydown = evhan_input_char_keydown;
+        inputel.keypress( evhan_input_char_keypress );
+        inputel.keydown( evhan_input_char_keydown );
       }
       /* Subtle point: the winid variable here is never reused, because we're
          inside a function being map()ed. Therefore, winid is safe to use in
          a closure. */
       var winid = win.id;
-      inputel.onfocus = function() { evhan_input_focus(winid); };
-      inputel.onblur = function() { evhan_input_blur(winid); };
-      inputel.winid = win.id;
+      inputel.focus( function() { evhan_input_focus(winid); } );
+      inputel.blur( function() { evhan_input_blur(winid); } );
+      inputel.data( 'winid', win.id );
       win.inputel = inputel;
       win.historypos = win.history.length;
       win.needscroll = true;
     }
 
     if (win.type == 'grid') {
-      var lineel = $('win'+win.id+'_ln'+argi.ypos);
+      var lineel = $('#win'+win.id+'_ln'+argi.ypos);
       if (!lineel) {
         glkote_error('Window ' + win.id + ' has requested input at unknown line ' + argi.ypos + '.');
         return;
@@ -923,41 +929,43 @@ function accept_inputset(arg) {
       var width = Math.round(maxlen * current_metrics.gridcharwidth);
       /* This calculation is antsy. See below. (But grid window line input
          is rare in IF.) */
-      var maxwidth = win.frameel.getWidth() - (current_metrics.buffermarginx + xpos + 2);
+      var maxwidth = win.frameel.outerWidth() - (current_metrics.buffermarginx + xpos + 2);
       if (width > maxwidth)
         width = maxwidth;
-      inputel.setStyle({ position: 'absolute',
+      inputel.css({ position: 'absolute',
         left: xpos+'px', top: pos.top+'px', width: width+'px' });
-      win.frameel.insert(inputel);
+      win.frameel.append(inputel);
     }
 
     if (win.type == 'buffer') {
-      var cursel = $('win'+win.id+'_cursor');
+      var cursel = $('#win'+win.id+'_cursor');
       if (!cursel) {
-        cursel = new Element('span',
-          { id: 'win'+win.id+'_cursor', 'class': 'InvisibleCursor' } );
-        insert_text(cursel, NBSP);
-        win.frameel.insert(cursel);
+	    cursel = jQuery( '<span>', {
+			id: 'win' + win.id + '_cursor',
+			'class': 'InvisibleCursor'
+		})
+			.text( NBSP );
+        win.frameel.append(cursel);
       }
-      var pos = cursel.positionedOffset();
+      var pos = cursel.position();
       /* This calculation is antsy. On Firefox, buffermarginx is too high
-         (or getWidth() is too low) by the width of a scrollbar. On MSIE,
+         (or width() is too low) by the width of a scrollbar. On MSIE,
          buffermarginx is one pixel too low. We fudge for that, giving a
          result which errs on the low side. */
-      var width = win.frameel.getWidth() - (current_metrics.buffermarginx + pos.left + 2);
+      var width = win.frameel.outerWidth() - (current_metrics.buffermarginx + pos.left + 2);
       if (width < 1)
         width = 1;
-      if (Prototype.Browser.Opera) {
+      if (jQuery.browser.opera) {
         /* I swear I don't understand what Opera thinks absolute positioning
            means. We will avoid it. */
-        inputel.setStyle({ position: 'relative',
+        inputel.css({ position: 'relative',
           left: '0px', top: '0px', width: width+'px' });
-        cursel.insert({ top:inputel });
+        cursel.append({ top:inputel });
       }
       else {
-        inputel.setStyle({ position: 'absolute',
+        inputel.css({ position: 'absolute',
           left: '0px', top: '0px', width: width+'px' });
-        cursel.insert(inputel);
+        cursel.append(inputel);
       }
     }
   });
@@ -967,10 +975,10 @@ function accept_inputset(arg) {
    last child of the parent.
 */
 function last_line_top_offset(el) {
-  var ls = el.childElements();
+  var ls = el.children();
   if (ls.length == 0)
     return 0;
-  return ls[ls.length-1].offsetTop;
+  return ls.last().offset().top;
 }
 
 /* Set windows_paging_count to the number of windows that need paging.
@@ -986,7 +994,7 @@ function readjust_paging_focus(canfocus) {
   var pageable_win = 0;
 
   if (perform_paging) {
-    windowdic.values().each(function(win) {
+    jQuery.each( windowdic, function(i, win) {
         if (win.needspaging) {
           windows_paging_count += 1;
           if (!pageable_win || win.id == last_known_paging)
@@ -1007,7 +1015,7 @@ function readjust_paging_focus(canfocus) {
 
     var newinputwin = 0;
     if (!disabled && !windows_paging_count) {
-      windowdic.values().each(function(win) {
+      jQuery.each( windowdic, function(i, win) {
           if (win.input) {
             if (!newinputwin || win.id == last_known_focus)
               newinputwin = win.id;
@@ -1016,7 +1024,7 @@ function readjust_paging_focus(canfocus) {
     }
     
     if (newinputwin) {
-      var win = windowdic.get(newinputwin);
+      var win = windowdic[newinputwin];
       if (win.inputel) {
         win.inputel.focus();
       }
@@ -1079,7 +1087,7 @@ function retry_update() {
 
 /* Hide the error pane. */
 function clear_error() {
-  $('errorpane').hide();
+  $('#errorpane').hide();
 }
 
 /* Hide the loading pane (the spinny compass), if it hasn't already been
@@ -1122,8 +1130,7 @@ function show_loading() {
    text into an element.
 */
 function insert_text(el, val) {
-  var nod = document.createTextNode(val);
-  el.appendChild(nod);
+  el.append( val );
 }
 
 /* Remove all children from a DOM element.
@@ -1137,16 +1144,6 @@ function remove_children(parent) {
     obj = ls.item(0);
     parent.removeChild(obj);
   }
-}
-
-/* Return the last child element of a DOM element. (Ignoring text nodes.)
-   If the element has no element children, this returns null.
-*/
-function last_child_of(obj) {
-  var ls = obj.childElements();
-  if (!ls || !ls.length)
-    return null;
-  return ls[ls.length-1];
 }
 
 /* Debugging utility: return a string displaying all of an object's
@@ -1185,11 +1182,11 @@ function inspect_deep(res) {
    handlers.)
 */
 function submit_line_input(win, inputel, termkey) {
-  var val = inputel.value;
+  var val = inputel.val();
 
   /* Store this input in the command history for this window, unless
      the input is blank or a duplicate. */
-  if (val && val != win.history.last()) {
+  if (val && val != win.history[win.history.length - 1]) {
     win.history.push(val);
     if (win.history.length > 20) {
       /* Don't keep more than twenty entries. */
@@ -1241,7 +1238,7 @@ function send_response(type, win, val, val2) {
   }
 
   if (!(type == 'init' || type == 'refresh')) {
-    windowdic.values().each(function(win) {
+    jQuery.each( windowdic, function(i, win) {
       var savepartial = (type != 'line' && type != 'char') 
                         || (win.id != winid);
       if (savepartial && win.input && win.input.type == 'line'
@@ -1277,7 +1274,7 @@ function evhan_doc_resize(ev) {
     resize_timer = null;
   }
 
-  resize_timer = doc_resize_real.delay(0.5);
+  resize_timer = setTimeout( doc_resize_real, 500 );
 }
 
 /* This executes when no new resize events have come along in the past
@@ -1290,8 +1287,8 @@ function doc_resize_real() {
   resize_timer = null;
 
   if (disabled) {
-    resize_timer = doc_resize_real.delay(0.5);
-    return;
+    resize_timer = setTimeout( doc_resize_real, 500 );
+	return;
   }
 
   current_metrics = measure_window();
@@ -1341,7 +1338,7 @@ function evhan_doc_keypress(ev) {
   var win;
 
   if (windows_paging_count) {
-    win = windowdic.get(last_known_paging);
+    win = windowdic[last_known_paging];
     if (win) {
       if (!((keycode >= 32 && keycode <= 126) || keycode == 13)) {
         /* If the keystroke is not a printable character (or Enter),
@@ -1354,7 +1351,7 @@ function evhan_doc_keypress(ev) {
       /* Scroll the unseen content to the top. */
       frameel.scrollTop = win.topunseen - current_metrics.buffercharheight;
       /* Compute the new topunseen value. */
-      var frameheight = frameel.getHeight();
+      var frameheight = frameel.outerHeight();
       var realbottom = last_line_top_offset(frameel);
       var newtopunseen = frameel.scrollTop + frameheight;
       if (newtopunseen > realbottom)
@@ -1366,7 +1363,7 @@ function evhan_doc_keypress(ev) {
            if not... */
         if (frameel.scrollTop + frameheight >= frameel.scrollHeight) {
           win.needspaging = false;
-          var moreel = $('win'+win.id+'_moreprompt');
+          var moreel = $('#win'+win.id+'_moreprompt');
           if (moreel)
             moreel.remove();
           readjust_paging_focus(true);
@@ -1376,7 +1373,7 @@ function evhan_doc_keypress(ev) {
     }
   }
 
-  win = windowdic.get(last_known_focus);
+  win = windowdic[last_known_focus];
   if (!win)
     return;
   if (!win.inputel)
@@ -1441,13 +1438,13 @@ function evhan_doc_keypress(ev) {
 function evhan_window_mousedown(ev, frameel) {
   if (!frameel.winid)
     return;
-  var win = windowdic.get(frameel.winid);
+  var win = windowdic[frameel.winid];
   if (!win)
     return;
 
   if (win.inputel) {
     last_known_focus = win.id;
-    if (Prototype.Browser.MobileSafari) {
+    if (MobileSafari) {
       ev.stop();
       //glkote_log("### focus to " + win.id);
       //### This doesn't always work, blah
@@ -1470,9 +1467,6 @@ function evhan_window_mousedown(ev, frameel) {
 */
 function evhan_input_char_keydown(ev) {
   var keycode = 0;
-  if (!ev) { /* MSIE broken event API */
-    ev = Event.extend(window.event);
-  }
   if (ev) keycode = ev.keyCode;
   if (!keycode) return true;
 
@@ -1534,7 +1528,7 @@ function evhan_input_char_keydown(ev) {
   if (res) {
     if (!this.winid)
       return true;
-    var win = windowdic.get(this.winid);
+    var win = windowdic[this.winid];
     if (!win || !win.input)
       return true;
 
@@ -1562,7 +1556,7 @@ function evhan_input_char_keypress(ev) {
   }
   if (!keycode) return false;
 
-  if (keycode == 10 && Prototype.Browser.MobileSafari) {
+  if (keycode == 10 && MobileSafari) {
     /* This case only occurs on old iPhones (iOS 3.1.3). */
     keycode = 13;
   }
@@ -1575,7 +1569,7 @@ function evhan_input_char_keypress(ev) {
 
   if (!this.winid)
     return true;
-  var win = windowdic.get(this.winid);
+  var win = windowdic[this.winid];
   if (!win || !win.input)
     return true;
 
@@ -1598,7 +1592,7 @@ function evhan_input_keydown(ev) {
   if (keycode == Event.KEY_UP || keycode == Event.KEY_DOWN) {
     if (!this.winid)
       return true;
-    var win = windowdic.get(this.winid);
+    var win = windowdic[this.winid];
     if (!win || !win.input)
       return true;
 
@@ -1623,7 +1617,7 @@ function evhan_input_keydown(ev) {
   else if (terminator_key_values[keycode]) {
     if (!this.winid)
       return true;
-    var win = windowdic.get(this.winid);
+    var win = windowdic[this.winid];
     if (!win || !win.input)
       return true;
 
@@ -1643,29 +1637,26 @@ function evhan_input_keydown(ev) {
    Divert the enter/return key to submit a line of input.
 */
 function evhan_input_keypress(ev) {
-  var keycode = 0;
-  if (!ev) { /* MSIE broken event API */
-    ev = Event.extend(window.event);
-    if (ev) keycode = ev.keyCode;
-  }
-  else {
-    if (ev) keycode = ev.which;
-  }
+  
+  var keycode = ev.which,
+  $this = jQuery( this );
+  
   if (!keycode) return true;
 
-  if (keycode == 10 && Prototype.Browser.MobileSafari) {
+  if (keycode == 10 && MobileSafari) {
     /* This case only occurs on old iPhones (iOS 3.1.3). */
     keycode = 13;
   }
-
+  
   if (keycode == 13) {
-    if (!this.winid)
+    
+    if ( !$this.data( 'winid' ) )
       return true;
-    var win = windowdic.get(this.winid);
+    var win = windowdic[$this.data( 'winid' )];
     if (!win || !win.input)
       return true;
 
-    submit_line_input(win, this, null);
+    submit_line_input(win, $this, null);
     return false;
   }
 
@@ -1677,7 +1668,7 @@ function evhan_input_keypress(ev) {
    Notice that the focus has switched to a line/char input field.
 */
 function evhan_input_focus(winid) {
-  var win = windowdic.get(winid);
+  var win = windowdic[winid];
   if (!win)
     return;
 
@@ -1691,7 +1682,7 @@ function evhan_input_focus(winid) {
    Notice that the focus has switched away from a line/char input field.
 */
 function evhan_input_blur(winid) {
-  var win = windowdic.get(winid);
+  var win = windowdic[winid];
   if (!win)
     return;
 
@@ -1701,14 +1692,14 @@ function evhan_input_blur(winid) {
 function evhan_window_scroll(frameel) {
   if (!frameel.winid)
     return;
-  var win = windowdic.get(frameel.winid);
+  var win = windowdic[frameel.winid];
   if (!win)
     return;
 
   if (!win.needspaging)
     return;
 
-  var frameheight = frameel.getHeight();
+  var frameheight = frameel.outerHeight();
   var realbottom = last_line_top_offset(frameel);
   var newtopunseen = frameel.scrollTop + frameheight;
   if (newtopunseen > realbottom)
@@ -1718,7 +1709,7 @@ function evhan_window_scroll(frameel) {
 
   if (frameel.scrollTop + frameheight >= frameel.scrollHeight) {
     win.needspaging = false;
-    var moreel = $('win'+win.id+'_moreprompt');
+    var moreel = $('#win'+win.id+'_moreprompt');
     if (moreel)
       moreel.remove();
     readjust_paging_focus(true);
@@ -1735,7 +1726,7 @@ function evhan_window_scroll(frameel) {
 */
 function build_evhan_hyperlink(winid, linkval) {
   return function() {
-    var win = windowdic.get(winid);
+    var win = windowdic[winid];
     if (!win)
       return false;
     if (!win.reqhyperlink)
