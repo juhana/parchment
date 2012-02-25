@@ -219,6 +219,7 @@ TextInput = Object.subClass({
 			.width( order.target.offset().left + order.target.width() - input.offset().left );
 		
 		this.scroll();
+		$( document ).trigger( 'TurnComplete' );
 	},
 	
 	// Submit the input data
