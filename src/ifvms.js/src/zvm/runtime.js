@@ -350,9 +350,29 @@ window.ZVM = Object.subClass( {
 		if ( stream == -5 )
 		{
 			data = this.streams[4].shift();
-			text = this.text.text_to_zscii( '' + window['eval']( data[1] ) );
+			try {
+				text = this.text.text_to_zscii( '' + window['eval']( data[1] ) );
+			} catch( e ) {
+				console.log( 'Invalid JavaScript: '+data[ 1 ] );
+			}
 			this.m.setUint16( data[0], text.length );
 			this.m.setBuffer( data[0] + 2, text );
+		}
+		if( stream == 6 )
+		{
+			this.streams[5].unshift( [ addr, '' ] );			
+		}
+		if ( stream == -6 )
+		{
+			data = this.streams[5].shift();
+			var htmlElem = data[1].split( ' ' )[0];
+			var elemClass = data[1].split( ' ' );
+			elemClass.shift();
+			elemClass = elemClass.join( ' ' );
+			this.ui.buffer += '<' + htmlElem + ' class="' + elemClass + '"></' + htmlElem + '>';
+			this.ui.flush();
+			this.ui.e.outputEvent( this.ui.e.orders );
+			this.ui.e.orders = [];
 		}
 	},
 	
@@ -368,6 +388,10 @@ window.ZVM = Object.subClass( {
 		else if ( this.streams[4].length )
 		{
 			this.streams[4][0][1] += text;
+		}
+		else if ( this.streams[5].length )
+		{
+			this.streams[5][0][1] += text;
 		}
 		// Don't print if stream 1 was switched off (why would you do that?!)
 		else if ( this.streams[0] )
