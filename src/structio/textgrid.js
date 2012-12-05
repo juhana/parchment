@@ -3,7 +3,7 @@
 Text grid (ie, status) windows
 ==============================
 
-Copyright (c) 2011 The Parchment Contributors
+Copyright (c) 2012 The Parchment Contributors
 BSD licenced
 http://code.google.com/p/parchment
 
@@ -48,7 +48,6 @@ var TextGrid = Object.subClass({
 		styles = this.styles,
 		env = this.io.env,
 		line, text, temp,
-		styleelem,
 		stylecode,
 		oldheight = lines.length;
 		
@@ -73,7 +72,7 @@ var TextGrid = Object.subClass({
 					if ( order.lines != 0 )
 					{
 						// Fix bad heights (that would split a multi-line status) by increasing the requested height to the first blank line
-						while ( /\S/.test( lines[order.lines].join( '' ) ) && order.lines < lines.length )
+						while ( order.lines < lines.length && /\S/.test( lines[order.lines].join( '' ) ) )
 						{
 							order.lines++;
 						}
@@ -116,10 +115,22 @@ var TextGrid = Object.subClass({
 				col = 0;
 			}
 			
+			// Set the cursor position
+			// Not that our coordinates are -1 compared to the Z-Machine
 			if ( code == 'cursor' )
 			{
 				row = order.to[0];
 				col = order.to[1];
+				
+				// It is illegal to position the cursor outside the window, but some games do (ex, Lost Pig's Hints)
+				if ( row < 0 )
+				{
+					row = 0;
+				}
+				if ( col < 0 )
+				{
+					col = 0;
+				}
 				
 				// Add a row(s) if needed
 				while ( row >= lines.length )
@@ -147,19 +158,16 @@ var TextGrid = Object.subClass({
 				stylecode = undefined;
 				if ( order.css )
 				{
-					styleelem = $( '<tt>' )
+					stylecode = $( '<tt>' )
 						.appendTo( elem )
-						.css( order.css );
-					if ( order.css.reverse )
-					{
-						do_reverse( styleelem );
-					}
-					stylecode = styleelem.attr( 'style' );
+						.css( order.css )
+						.attr( 'style' );
 					if ( stylecode )
 					{
 						stylecode = ' style="' + stylecode + '"';
 					}
 				}
+				// The <tt> will be removed in .write()
 				
 				// Add the text to the arrays
 				text = order.text;
@@ -179,8 +187,8 @@ var TextGrid = Object.subClass({
 						row++;
 						col = 0;
 						
-						// Add a row if needed
-						if ( row >= lines.length )
+						// Add a row if needed, ie. we must still have text to go
+						if ( row >= lines.length && j < text.length )
 						{
 							this.addline();
 						}

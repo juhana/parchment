@@ -3,7 +3,11 @@
 Parchment
 =========
 
+<<<<<<< HEAD
 Built: 2012-04-22
+=======
+Built: 2012-04-07
+>>>>>>> upstream/master
 
 Copyright (c) 2008-2012 The Parchment Contributors
 BSD licenced

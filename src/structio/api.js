@@ -3,7 +3,7 @@
 StructIO
 ========
 
-Copyright (c) 2011 The Parchment Contributors
+Copyright (c) 2012 The Parchment Contributors
 BSD licenced
 http://code.google.com/p/parchment
 
@@ -20,14 +20,8 @@ TODO:
 
 */
 
-// Function to replace initial spaces with entities the browsers will respect. &ensp; seems a better width than &nbsp;
-var space_replacer = function( spaces )
-{
-	return '\n' + Array( spaces.length ).join( '&ensp;' );
-},
-
 // Root stream handler. Some structures (like text grids) could have alternative handlers
-basic_stream_handler = function( e )
+var basic_stream_handler = function( e )
 {
 	var order = e.order,
 	struct = e.io.structures[order.name] || { node: 'span' },
@@ -38,19 +32,8 @@ basic_stream_handler = function( e )
 	elem = $( '<' + node + '>' )
 		.appendTo( e.target )
 		.addClass( order.name )
-		.css( order.css || {} );
-	if ( order.css && order.css.reverse )
-	{
-		do_reverse( elem );
-	}
-	// Add the text, if we've been given any
-	if ( text )
-	{
-		// Fix initial spaces, but not for tt (which will actually mess it up)
-		// For tt's, fix all spaces so that they will still wrap
-		text = node == 'tt' ? text.replace( /( +)/g, '<span class="space">$1</span>' ) : text.replace( /\n +(?=\S)/g, space_replacer );
-		elem.html( text.replace( /\n/g, '<br>' ) );
-	}
+		.css( order.css || {} )
+		.text( text || '' );
 	
 	// If we have a custom function to run, do so
 	if ( struct.func )
@@ -59,10 +42,7 @@ basic_stream_handler = function( e )
 	}
 		
 	return false;
-},
-
-// Pattern for getting the RGB components from a colour
-RGB_pattern = /(\d+),\s*(\d+),\s*(\d+)/,
+};
 
 // The public API
 // .input() must be set by whatever uses StructIO
@@ -86,8 +66,8 @@ StructIO = Object.subClass({
 			charheight: charheight,
 			charwidth: charwidth,
 			width: widthinchars,
-			fgcolour: RGB_pattern.exec( element.css( 'color' ) ).slice( 1 ),
-			bgcolour: RGB_pattern.exec( element.css( 'bgcolor' ) ).slice( 1 )
+			fgcolour: element.css( 'color' ),
+			bgcolour: element.css( 'bgcolor' )
 		});
 		// Set the container's width: +2 to account for the 1px of padding the structures inside will receive to hide obnoxious serifs
 		element.width( widthinchars * charwidth + 2 );
@@ -114,6 +94,7 @@ StructIO = Object.subClass({
 	{
 		var order, code, i,
 		target = this.target,
+		TextInput = this.TextInput,
 		temp;
 		
 		// Process the orders
@@ -164,13 +145,19 @@ StructIO = Object.subClass({
 			if ( code == 'read' )
 			{
 				order.target = target;
-				this.TextInput.getLine( order );
+				TextInput.getLine( order );
 			}
 			
 			// Character input
 			if ( code == 'char' )
 			{
-				this.TextInput.getChar( order );
+				TextInput.getChar( order );
+			}
+			
+			// When quitting, scroll to the bottom in case something was printed since the last input
+			if ( code == 'quit' )
+			{
+				TextInput.scroll();
 			}
 		}
 	}
