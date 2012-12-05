@@ -219,10 +219,7 @@ TextInput = Object.subClass({
 			.width( order.target.offset().left + order.target.width() - input.offset().left );
 		
 		this.scroll();
-		$( document ).trigger({
-		    type: 'TurnComplete',
-		    mode: 'line'
-		});
+		$( document ).trigger( 'TurnComplete' );
 	},
 	
 	// Submit the input data
@@ -286,12 +283,8 @@ TextInput = Object.subClass({
 			.appendTo( this.container );
 		
 		this.scroll();
-
-        $( document ).trigger({
-            type: 'TurnComplete',
-            mode: 'char'
-        });
-   	},
+        $( document ).trigger( 'TurnComplete' );
+	},
 	
 	// Submit the input data
 	submitChar: function()

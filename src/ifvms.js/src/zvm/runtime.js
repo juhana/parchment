@@ -175,7 +175,7 @@ window.ZVM = Object.subClass( {
 		{
 			return 0x0102;
 		}
-		if ( id == 0x30 || id == 0x2000 )
+		if ( id == 0x30 || id == 0x31 || id == 0x2000 )
 		{
 			return 1;
 		}
@@ -350,11 +350,13 @@ window.ZVM = Object.subClass( {
 		if ( stream == -5 )
 		{
 			data = this.streams[4].shift();
+			
 			try {
 				text = this.text.text_to_zscii( '' + window['eval']( data[1] ) );
 			} catch( e ) {
 				console.log( 'Invalid JavaScript: '+data[ 1 ] );
 			}
+
 			this.m.setUint16( data[0], text.length );
 			this.m.setBuffer( data[0] + 2, text );
 		}

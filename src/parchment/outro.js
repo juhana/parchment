@@ -12,8 +12,7 @@ http://code.google.com/p/parchment
 
 var parchment = window.parchment;
 
-// Load Parchment, start it all up!
-$(function()
+parchment.init = function()
 {
 	var library;
 	
@@ -45,6 +44,6 @@ $(function()
 	{
 		$.getScript( 'http://google-analytics.com/ga.js', function(){_gat._getTracker( 'UA-7949545-3' )._trackPageview();} );
 	}
-});
+};
 
 })( this, jQuery );
