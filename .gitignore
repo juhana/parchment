@@ -4,3 +4,6 @@
 *.z*
 src/ifvms.js/test/gameinfo.dbg
 src/ifvms.js/test/jquery.js
+.DS_Store
+.project
+.settings
