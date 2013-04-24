@@ -85,3 +85,5 @@ urloptions = (function( options ) {
 	}
 	return result;
 } )( location.search.slice(1).split( /[&;]/g ) );
+
+window.parchment = parchment;
