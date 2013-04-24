@@ -23,6 +23,11 @@ TODO:
 // Root stream handler. Some structures (like text grids) could have alternative handlers
 var basic_stream_handler = function( e )
 {
+	var target = vorple.parser._container.stream;
+	if( e.target.className !== 'main' ) {
+		target = e.target;
+	}
+
 	var order = e.order,
 	struct = e.io.structures[order.name] || { node: 'span' },
 	node = order.node || struct.node,
@@ -30,10 +35,10 @@ var basic_stream_handler = function( e )
 	
 	// Create the new element and set everything that needs to be set
 	elem = $( '<' + node + '>' )
-		.appendTo( e.target )
+		.appendTo( target )
 		.addClass( order.name )
 		.css( order.css || {} )
-		.text( text ? text.replace( /\r/g, '\n' ) : '' );
+		.html( text || '' );
 	
 	// If we have a custom function to run, do so
 	if ( struct.func )

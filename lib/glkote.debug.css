@@ -3,7 +3,7 @@
 GlkOte
 ======
 
-Built: 2013-04-04
+Built: 2013-04-24
 
 GlkOte -- a Javascript display library for IF interfaces
 Dialog -- a Javascript load/save library for IF interfaces
