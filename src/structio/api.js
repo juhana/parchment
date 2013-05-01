@@ -23,7 +23,7 @@ TODO:
 // Root stream handler. Some structures (like text grids) could have alternative handlers
 var basic_stream_handler = function( e )
 {
-	var target = vorple.parser._container.stream;
+	var target = vorple.parser.getStream();
 	if( e.target.className !== 'main' ) {
 		target = e.target;
 	}
